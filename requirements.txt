@@ -1,0 +1,4 @@
+# Basico: FTP/FTPS (stdlib), SFTP e WebDAV.
+paramiko>=3.0
+requests>=2.28
+pyinstaller>=6.0

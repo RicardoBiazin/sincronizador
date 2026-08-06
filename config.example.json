@@ -1,0 +1,116 @@
+{
+  "jobs": [
+    {
+      "name": "Documentos para Backup local",
+      "mode": "espelho",
+      "enabled": true,
+      "source": "C:\\Users\\Fulano\\Documentos",
+      "source_type": "local",
+      "source_remote": {},
+      "dest": "D:\\Backup\\Documentos",
+      "dest_type": "local",
+      "dest_remote": {},
+      "include": [],
+      "exclude": ["~$*", "*.tmp", "Thumbs.db", "desktop.ini"],
+      "versioning": true,
+      "backup_dir": "D:\\Backup\\_versoes",
+      "keep_versions_days": 30,
+      "validate": true,
+      "validate_hash": false,
+      "compare": "auto"
+    },
+    {
+      "name": "Pasta local para Google Drive",
+      "mode": "incremental",
+      "enabled": true,
+      "source": "C:\\Projetos",
+      "source_type": "local",
+      "dest": "G:\\Meu Drive\\Projetos",
+      "dest_type": "local",
+      "include": [],
+      "exclude": ["*.tmp", ".git/"],
+      "versioning": false
+    },
+    {
+      "name": "Envio para servidor SFTP",
+      "mode": "espelho",
+      "enabled": false,
+      "source": "C:\\site\\publico",
+      "source_type": "local",
+      "dest": "/var/www/html",
+      "dest_type": "sftp",
+      "dest_remote": {
+        "host": "meuservidor.com",
+        "port": 22,
+        "user": "deploy",
+        "password": "SENHA",
+        "key_file": "",
+        "tls": false,
+        "passive": true,
+        "options": {}
+      },
+      "include": [],
+      "exclude": [],
+      "versioning": false,
+      "compare": "auto"
+    },
+    {
+      "name": "Backup para Amazon S3",
+      "mode": "incremental",
+      "enabled": false,
+      "source": "D:\\Backup",
+      "source_type": "local",
+      "dest": "backups/estacao-01",
+      "dest_type": "s3",
+      "dest_remote": {
+        "user": "AKIAEXEMPLO",
+        "password": "SEGREDO",
+        "options": {
+          "bucket": "meu-bucket",
+          "region": "sa-east-1",
+          "endpoint_url": "",
+          "head_mtime": false
+        }
+      },
+      "include": [],
+      "exclude": [],
+      "versioning": false,
+      "compare": "auto"
+    },
+    {
+      "name": "Backup para Azure Blob",
+      "mode": "incremental",
+      "enabled": false,
+      "source": "D:\\Backup",
+      "source_type": "local",
+      "dest": "backups/estacao-01",
+      "dest_type": "azureblob",
+      "dest_remote": {
+        "options": {
+          "container": "meucontainer",
+          "connection_string": "DefaultEndpointsProtocol=https;AccountName=...;AccountKey=...;EndpointSuffix=core.windows.net"
+        }
+      },
+      "include": [],
+      "exclude": [],
+      "versioning": false,
+      "compare": "auto"
+    }
+  ],
+  "email": {
+    "enabled": false,
+    "smtp_host": "smtp.gmail.com",
+    "smtp_port": 587,
+    "smtp_user": "seu@email.com",
+    "smtp_password": "senha-de-app",
+    "use_tls": true,
+    "from_addr": "seu@email.com",
+    "to_addrs": ["destino@email.com"],
+    "notify_on": "erros"
+  },
+  "log_dir": "logs",
+  "log_keep_days": 60,
+  "theme": "Claro",
+  "accent": "#0a6cff",
+  "parallel": 4
+}

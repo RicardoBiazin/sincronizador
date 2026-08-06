@@ -1,0 +1,17 @@
+# Build do PyInstaller
+build/
+dist/
+*.spec
+Sincronizador.zip
+
+# Dados de execucao (ficam ao lado do executavel)
+logs/
+state/
+backup/
+sincronizador.config.json
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/

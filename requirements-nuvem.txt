@@ -1,0 +1,13 @@
+# Servicos de nuvem. Instale so o que for usar - cada um pesa bastante no
+# executavel (os quatro juntos somam mais de 100 MB).
+#
+#   pip install -r requirements-nuvem.txt
+#
+# Amazon S3 e Backblaze B2 (o B2 usa a API compativel com S3)
+boto3>=1.28
+# Microsoft Azure Blob Storage
+azure-storage-blob>=12.19
+# Microsoft Azure File Storage
+azure-storage-file-share>=12.15
+# Google Cloud Storage
+google-cloud-storage>=2.14

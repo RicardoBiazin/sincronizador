@@ -10,6 +10,19 @@ state/
 backup/
 sincronizador.config.json
 
+# Segredos. O repositorio e' publico e o programa lida com client_secret e
+# refresh_token de OAuth: o arquivo que o Google entrega pronto chega com o
+# nome client_secret_*.apps.googleusercontent.com.json e cairia direto aqui.
+.env
+.env.*
+!.env.example
+client_secret*.json
+credentials*.json
+*token*.json
+*.pem
+*.key
+*.pfx
+
 # Python
 __pycache__/
 *.py[cod]

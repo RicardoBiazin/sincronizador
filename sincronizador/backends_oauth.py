@@ -95,9 +95,38 @@ def _sessao_http():
                      raise_on_status=False, respect_retry_after_header=True)
     s = requests.Session()
     adaptador = HTTPAdapter(max_retries=politica, pool_maxsize=16)
-    s.mount("http://", adaptador)
+    # Só https. O adaptador de http:// foi retirado de proposito: por aqui
+    # trafegam refresh token e access token, e um endpoint em texto claro - por
+    # engano de configuracao ou por um redirect - entregaria a credencial a quem
+    # estivesse no caminho. Sem o adaptador o requests ainda atenderia http://,
+    # entao quem barra e' o _exigir_https() abaixo, chamado antes de cada
+    # requisicao; o mount apenas deixa de dar retry a algo que nao deve ocorrer.
     s.mount("https://", adaptador)
     return s
+
+
+def _exigir_https(url: str) -> str:
+    """Recusa url que nao seja https. Devolve a url, para uso em cadeia.
+
+    O motivo nao e' hipotetico. Boa parte das urls que este modulo chama NAO sao
+    nossas: vem dentro da resposta do servico - `@odata.nextLink` na paginacao do
+    OneDrive, `uploadUrl` da sessao de upload, `nextPageToken` no Drive - e sao
+    seguidas com o token de acesso no cabecalho. Uma resposta que devolvesse
+    `http://...` faria o cliente entregar a credencial em texto claro a quem
+    estivesse no caminho.
+
+    localhost fica de fora porque o fluxo OAuth usa um redirect local em http.
+    """
+    from urllib.parse import urlsplit
+    partes = urlsplit(url)
+    if partes.scheme == "https":
+        return url
+    if partes.scheme == "http" and partes.hostname in ("localhost", "127.0.0.1", "::1"):
+        return url
+    raise ValueError(
+        f"endpoint OAuth precisa ser https (recebi {partes.scheme or 'sem esquema'}://"
+        f"{partes.hostname or '?'}) - por aqui passam tokens de acesso"
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -126,6 +155,7 @@ class OAuthEndpoint(Endpoint):
         return s
 
     def _pedir(self, metodo: str, url: str, **kw):
+        _exigir_https(url)      # a url pode ter vindo da resposta do servico
         cab = dict(kw.pop("headers", None) or {})
         corpo = kw.get("data")
         # so da para repetir a chamada se o corpo puder ser reenviado
@@ -387,7 +417,9 @@ class OneDriveEndpoint(OAuthEndpoint):
                         data=json.dumps({"item": {
                             "@microsoft.graph.conflictBehavior": "replace",
                             "fileSystemInfo": fsi}}))
-        url = r.json()["uploadUrl"]
+        # A url vem da resposta e carrega autorizacao propria: exigir https aqui
+        # tambem, porque este envio nao passa pelo _pedir.
+        url = _exigir_https(r.json()["uploadUrl"])
         enviado = 0
         total = size
         while True:

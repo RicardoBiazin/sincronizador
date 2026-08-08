@@ -206,7 +206,8 @@ class Comparer:
         if not self.hash_check:
             return True
         try:
-            return _hash_of(ea, rel, fa) == _hash_of(eb, rel, fb)
+            ha, hb, _alg = _hashes_para_comparar(ea, eb, rel, fa, fb)
+            return ha == hb
         except Exception:
             return False   # na duvida, trata como diferente e recopia
 
@@ -617,17 +618,22 @@ def _rescan_union(a, b, job, a_skip=None, b_skip=None) -> Dict[str, FileInfo]:
 # ---------------------------------------------------------------------------
 # Validacao pos-sincronizacao
 # ---------------------------------------------------------------------------
-def _hash_of(endpoint, rel: str, info: Optional[FileInfo] = None) -> str:
-    """MD5 do arquivo. Usa o hash que o servico ja informou, quando existe -
-    S3/Azure/GCS entregam o MD5 na listagem, entao nao ha o que baixar."""
+def _hash_pronto(endpoint, rel: str, info: Optional[FileInfo] = None) -> str:
+    """MD5 que o servico ja' informou na listagem, ou "" se nao informou.
+
+    S3/Azure/GCS entregam o MD5 do objeto junto com os metadados, entao para
+    esses nao ha o que baixar - e o algoritmo e' escolha deles, nao nossa.
+    """
     try:
-        pronto = endpoint.content_hash(rel, info)
+        return endpoint.content_hash(rel, info) or ""
     except Exception:
-        pronto = ""
-    if pronto:
-        return pronto
+        return ""
+
+
+def _hash_calculado(endpoint, rel: str, algoritmo: str) -> str:
+    """Le o arquivo e calcula o hash no algoritmo pedido."""
     import hashlib
-    h = hashlib.md5()
+    h = hashlib.new(algoritmo)
     fobj = endpoint.open_read(rel)
     try:
         while True:
@@ -641,6 +647,44 @@ def _hash_of(endpoint, rel: str, info: Optional[FileInfo] = None) -> str:
         except Exception:
             pass
     return h.hexdigest()
+
+
+def _hashes_para_comparar(ea, eb, rel: str, fa=None, fb=None) -> tuple[str, str, str]:
+    """Devolve (hash_a, hash_b, algoritmo) comparaveis entre os dois lados.
+
+    Por que negociar em vez de fixar MD5: MD5 tem colisao construivel, ou seja,
+    e' possivel fabricar dois arquivos DIFERENTES com o mesmo hash. Para
+    "mudou desde a ultima vez?" isso e' irrelevante; para a VALIDACAO final,
+    que existe para afirmar "o destino e' igual a origem", um destino hostil
+    poderia satisfazer a checagem com conteudo trocado.
+
+    Nao da' para simplesmente usar sha256: quando um lado e' object storage, o
+    hash vem pronto na listagem e e' MD5 - trocar o algoritmo forcaria baixar o
+    arquivo inteiro dos dois lados a cada validacao. Entao a regra e':
+
+      - algum lado so' tem MD5 pronto  -> MD5 nos dois (sem download extra);
+      - nenhum lado tem hash pronto    -> sha256 nos dois, que ja' vamos ler
+                                          os bytes de qualquer forma.
+
+    O custo de sha256 sobre bytes que ja' estao sendo lidos e' desprezivel.
+    """
+    pronto_a = _hash_pronto(ea, rel, fa)
+    pronto_b = _hash_pronto(eb, rel, fb)
+
+    if pronto_a or pronto_b:
+        # Um lado imposto em MD5 obriga o outro a acompanhar.
+        ha = pronto_a or _hash_calculado(ea, rel, "md5")
+        hb = pronto_b or _hash_calculado(eb, rel, "md5")
+        return ha, hb, "md5"
+
+    return (_hash_calculado(ea, rel, "sha256"),
+            _hash_calculado(eb, rel, "sha256"),
+            "sha256")
+
+
+def _hash_of(endpoint, rel: str, info: Optional[FileInfo] = None) -> str:
+    """MD5 de um lado so'. Mantido para quem compara um endpoint isolado."""
+    return _hash_pronto(endpoint, rel, info) or _hash_calculado(endpoint, rel, "md5")
 
 
 def _validate(job, src, dst, st: Stats, logger, src_skip=None, dst_skip=None,
@@ -674,9 +718,10 @@ def _validate(job, src, dst, st: Stats, logger, src_skip=None, dst_skip=None,
             return
         if job.validate_hash:
             try:
-                if _hash_of(ea, rel, fa) != _hash_of(eb, rel, fb):
-                    st.validation_failed.append(f"{rel}: conteudo (hash) diferente")
-                    logger.error("  VALIDACAO FALHOU: %s (hash)", rel)
+                ha, hb, alg = _hashes_para_comparar(ea, eb, rel, fa, fb)
+                if ha != hb:
+                    st.validation_failed.append(f"{rel}: conteudo ({alg}) diferente")
+                    logger.error("  VALIDACAO FALHOU: %s (%s)", rel, alg)
                     return
             except Exception as e:
                 st.validation_failed.append(f"{rel}: erro ao calcular hash ({e})")

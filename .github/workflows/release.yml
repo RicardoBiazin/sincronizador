@@ -1,0 +1,47 @@
+name: Release
+
+# A cada tag vX.Y.Z: valida (compila + importa o pacote) e publica um Release com
+# as notas montadas dos commits desde a tag anterior. Sem passo manual.
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest   # app Windows (winreg, DPAPI, Tkinter, mutex)
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      # Gate leve e confiavel: nao roda os testes de nuvem (precisam de emuladores
+      # pesados). Compila tudo e importa o pacote inteiro — pega erro de sintaxe e
+      # de import antes de publicar.
+      - name: Instalar dependencias base
+        run: pip install paramiko requests "cryptography>=50"
+      - name: Compilar e importar (smoke)
+        run: |
+          python -m compileall sincronizador
+          python -c "import sincronizador; from sincronizador import engine, filters, config, endpoints, backends, backends_oauth, oauth, segredos, notify, cli"
+
+      - name: Montar as notas dos commits
+        shell: bash
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          PREV=$(git describe --tags --abbrev=0 "${TAG}^" 2>/dev/null || echo "")
+          if [ -n "$PREV" ]; then echo "## Mudanças desde ${PREV}" > NOTES.md; RANGE="${PREV}..${TAG}"; else echo "## Primeiro release" > NOTES.md; RANGE="${TAG}"; fi
+          echo "" >> NOTES.md
+          git log --no-merges --pretty='- %s' "$RANGE" >> NOTES.md
+
+      - name: Publicar o Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "${{ github.ref_name }}" --title "${{ github.ref_name }}" --notes-file NOTES.md

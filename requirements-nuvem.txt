@@ -1,13 +1,21 @@
 # Servicos de nuvem. Instale so o que for usar - cada um pesa bastante no
+#
+# VERSOES FIXAS (21/08/2026). Faixa (`>=`) nao e' consultavel: o OSV precisa de
+# versao concreta, entao a varredura dizia "0 CVE" quando nada tinha sido medido.
+# E havia: cryptography 46.0.7, que era o instalado, tem 7 vulnerabilidades
+# conhecidas -- inclusive OpenSSL vulneravel no wheel e oraculo Bleichenbacher.
+# Num programa que faz SSH e fala com nuvem, isso nao e' detalhe.
+#
+# Os valores sao os do .venv deste projeto, e a suite passa com eles.
 # executavel (os quatro juntos somam mais de 100 MB).
 #
 #   pip install -r requirements-nuvem.txt
 #
 # Amazon S3 e Backblaze B2 (o B2 usa a API compativel com S3)
-boto3>=1.28
+boto3==1.43.78
 # Microsoft Azure Blob Storage
-azure-storage-blob>=12.19
+azure-storage-blob==12.30.0
 # Microsoft Azure File Storage
-azure-storage-file-share>=12.15
+azure-storage-file-share==12.26.0
 # Google Cloud Storage
-google-cloud-storage>=2.14
+google-cloud-storage==3.13.1

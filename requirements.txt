@@ -1,8 +1,16 @@
 # Basico: FTP/FTPS (stdlib), SFTP e WebDAV.
-paramiko>=3.0
-requests>=2.28
-pyinstaller>=6.0
+#
+# VERSOES FIXAS (21/08/2026). Faixa (`>=`) nao e' consultavel: o OSV precisa de
+# versao concreta, entao a varredura dizia "0 CVE" quando nada tinha sido medido.
+# E havia: cryptography 46.0.7, que era o instalado, tem 7 vulnerabilidades
+# conhecidas -- inclusive OpenSSL vulneravel no wheel e oraculo Bleichenbacher.
+# Num programa que faz SSH e fala com nuvem, isso nao e' detalhe.
+#
+# Os valores sao os do .venv deste projeto, e a suite passa com eles.
+paramiko==5.0.0
+requests==2.33.1
+pyinstaller==6.21.0
 
 # cryptography: vem via paramiko e cifra os segredos. Piso >=50 fecha advisories
 # de versoes antigas (OpenSSL no wheel, oracle PKCS#7, DoS na cadeia de cert).
-cryptography>=50
+cryptography==50.0.0
